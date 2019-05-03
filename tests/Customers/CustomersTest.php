@@ -1,12 +1,17 @@
 <?php
 use PHPUnit\Framework\TestCase;
 
+use Froxlor\Settings;
+use Froxlor\Database\Database;
+use Froxlor\Api\Commands\Admins;
+use Froxlor\Api\Commands\Customers;
+
 /**
  *
- * @covers ApiCommand
- * @covers ApiParameter
- * @covers Customers
- * @covers Admins
+ * @covers \Froxlor\Api\ApiCommand
+ * @covers \Froxlor\Api\ApiParameter
+ * @covers \Froxlor\Api\Commands\Customers
+ * @covers \Froxlor\Api\Commands\Admins
  */
 class CustomersTest extends TestCase
 {
@@ -14,7 +19,7 @@ class CustomersTest extends TestCase
 	public function testAdminCustomersAdd()
 	{
 		global $admin_userdata;
-		
+
 		$data = [
 			'new_loginname' => 'test1',
 			'email' => 'team@froxlor.org',
@@ -31,12 +36,12 @@ class CustomersTest extends TestCase
 			'email_imap' => 1,
 			'email_pop3' => 0,
 			'ftps' => 15,
-			'tickets' => 15,
 			'mysqls' => 15,
 			'createstdsubdomain' => 1,
 			'new_customer_password' => 'h0lYmo1y',
 			'sendpassword' => TRAVIS_CI == 1 ? 0 : 1,
 			'phpenabled' => 1,
+			'dnsenabled' => 1,
 			'store_defaultindex' => 1,
 			'custom_notes' => 'secret',
 			'custom_notes_show' => 0,
@@ -45,7 +50,7 @@ class CustomersTest extends TestCase
 				1
 			)
 		];
-		
+
 		$json_result = Customers::getLocal($admin_userdata, $data)->add();
 		$result = json_decode($json_result, true)['data'];
 		$this->assertEquals(1, $result['customerid']);
@@ -58,14 +63,14 @@ class CustomersTest extends TestCase
 	public function testAdminCustomersAddEmptyMail()
 	{
 		global $admin_userdata;
-		
+
 		$data = [
 			'new_loginname' => 'test2',
 			'email' => ' ',
 			'firstname' => 'Test2',
 			'name' => 'Testman2'
 		];
-		
+
 		$this->expectExceptionMessage('Requested parameter "email" is empty where it should not be for "Customers:add"');
 		Customers::getLocal($admin_userdata, $data)->add();
 	}
@@ -73,14 +78,14 @@ class CustomersTest extends TestCase
 	public function testAdminCustomersAddInvalidMail()
 	{
 		global $admin_userdata;
-		
+
 		$data = [
 			'new_loginname' => 'test2',
 			'email' => 'test.froxlor.org',
 			'firstname' => 'Test2',
 			'name' => 'Testman2'
 		];
-		
+
 		$this->expectExceptionMessage("Email-address test.froxlor.org contains invalid characters or is incomplete");
 		Customers::getLocal($admin_userdata, $data)->add();
 	}
@@ -92,7 +97,7 @@ class CustomersTest extends TestCase
 	public function testAdminCustomersList()
 	{
 		global $admin_userdata;
-		
+
 		$json_result = Customers::getLocal($admin_userdata)->listing();
 		$result = json_decode($json_result, true)['data'];
 		$this->assertEquals(1, $result['count']);
@@ -128,10 +133,10 @@ class CustomersTest extends TestCase
 			'id' => 1
 		))->get();
 		$customer_userdata = json_decode($json_result, true)['data'];
-		
+
 		$this->expectExceptionCode(403);
 		$this->expectExceptionMessage("Not allowed to execute given command.");
-		
+
 		$json_result = Customers::getLocal($customer_userdata)->listing();
 	}
 
@@ -147,12 +152,12 @@ class CustomersTest extends TestCase
 			'id' => 1
 		))->get();
 		$customer_userdata = json_decode($json_result, true)['data'];
-		
+
 		$json_result = Customers::getLocal($customer_userdata, array(
 			'id' => $customer_userdata['customerid']
 		))->get();
 		$result = json_decode($json_result, true)['data'];
-		
+
 		$this->assertEquals(1, $result['customerid']);
 		$this->assertEquals('team@froxlor.org', $result['email']);
 		$this->assertEquals(1337, $result['customernumber']);
@@ -183,10 +188,10 @@ class CustomersTest extends TestCase
 			'id' => 1
 		))->get();
 		$customer_userdata = json_decode($json_result, true)['data'];
-		
+
 		$this->expectException(Exception::class);
 		$this->expectExceptionCode(401);
-		
+
 		Customers::getLocal($customer_userdata, array(
 			'id' => 2
 		))->get();
@@ -204,13 +209,13 @@ class CustomersTest extends TestCase
 			'id' => 1,
 			'deactivated' => 1
 		))->update();
-		
+
 		// get customer and check results
 		$json_result = Customers::getLocal($admin_userdata, array(
 			'id' => 1
 		))->get();
 		$result = json_decode($json_result, true)['data'];
-		
+
 		$this->assertEquals(1, $result['customerid']);
 		$this->assertEquals(1, $result['deactivated']);
 		// standard-subdomains will be removed on deactivation
@@ -229,11 +234,11 @@ class CustomersTest extends TestCase
 			'id' => 1
 		))->get();
 		$customer_userdata = json_decode($json_result, true)['data'];
-		
+
 		$this->expectException(Exception::class);
 		$this->expectExceptionCode(406);
 		$this->expectExceptionMessage("Account suspended");
-		
+
 		Customers::getLocal($customer_userdata, array(
 			'id' => $customer_userdata['customerid']
 		))->get();
@@ -246,32 +251,32 @@ class CustomersTest extends TestCase
 	public function testCustomerCustomersUpdate()
 	{
 		global $admin_userdata;
-		
+
 		// reactivate customer
 		// get customer
 		Customers::getLocal($admin_userdata, array(
 			'id' => 1,
 			'deactivated' => 0
 		))->update();
-		
+
 		// get customer
 		$json_result = Customers::getLocal($admin_userdata, array(
 			'id' => 1
 		))->get();
 		$customer_userdata = json_decode($json_result, true)['data'];
-		
+
 		Customers::getLocal($customer_userdata, array(
 			'id' => $customer_userdata['customerid'],
 			'def_language' => 'English',
 			'theme' => 'Froxlor',
 			'new_customer_password' => 'h0lYmo1y2'
 		))->update();
-		
+
 		$json_result = Customers::getLocal($customer_userdata, array(
 			'id' => $customer_userdata['customerid']
 		))->get();
 		$result = json_decode($json_result, true)['data'];
-		
+
 		$this->assertEquals('Froxlor', $result['theme']);
 		$this->assertEquals('English', $result['def_language']);
 	}
@@ -289,7 +294,7 @@ class CustomersTest extends TestCase
 		))->get();
 		$reseller_userdata = json_decode($json_result, true)['data'];
 		$reseller_userdata['adminsession'] = 1;
-		
+
 		$this->expectExceptionMessage("You cannot allocate more resources than you own for yourself.");
 		// add new customer
 		$data = [
@@ -371,7 +376,7 @@ class CustomersTest extends TestCase
 		global $admin_userdata;
 		$testadmin_userdata = $admin_userdata;
 		$testadmin_userdata['adminsession'] = 0;
-		
+
 		$this->expectExceptionCode(403);
 		$this->expectExceptionMessage("Not allowed to execute given command.");
 		Customers::getLocal($testadmin_userdata, array(
@@ -384,7 +389,7 @@ class CustomersTest extends TestCase
 		global $admin_userdata;
 		$testadmin_userdata = $admin_userdata;
 		$testadmin_userdata['change_serversettings'] = 0;
-		
+
 		$this->expectExceptionCode(403);
 		$this->expectExceptionMessage("Not allowed to execute given command.");
 		Customers::getLocal($testadmin_userdata, array(
@@ -412,7 +417,7 @@ class CustomersTest extends TestCase
 			'adminid' => 2
 		))->move();
 		$result = json_decode($json_result, true)['data'];
-		
+
 		$this->assertEquals(2, $result['adminid']);
 	}
 
@@ -423,7 +428,7 @@ class CustomersTest extends TestCase
 	public function testAdminCustomersAddLoginnameIsSystemaccount()
 	{
 		global $admin_userdata;
-		
+
 		$data = [
 			'new_loginname' => 'web1',
 			'email' => 'team@froxlor.org',
@@ -439,7 +444,6 @@ class CustomersTest extends TestCase
 			'email_imap' => 1,
 			'email_pop3' => 0,
 			'ftps' => 15,
-			'tickets' => 15,
 			'mysqls' => 15,
 			'createstdsubdomain' => 1,
 			'new_customer_password' => 'h0lYmo1y',
@@ -453,7 +457,7 @@ class CustomersTest extends TestCase
 				1
 			)
 		];
-		
+
 		$this->expectExceptionMessage('You cannot create accounts which are similar to system accounts (as for example begin with "web"). Please enter another account name.');
 		Customers::getLocal($admin_userdata, $data)->add();
 	}
@@ -465,10 +469,9 @@ class CustomersTest extends TestCase
 	public function testAdminCustomersAddAutoLoginname()
 	{
 		global $admin_userdata;
-		
+
 		Settings::Set('system.lastaccountnumber', 0, true);
-		Settings::Set('ticket.enabled', 0, true);
-		
+
 		$data = [
 			'new_loginname' => '',
 			'email' => 'team@froxlor.org',
@@ -479,7 +482,7 @@ class CustomersTest extends TestCase
 			'perlenabled' => 2,
 			'dnsenabled' => 4
 		];
-		
+
 		$json_result = Customers::getLocal($admin_userdata, $data)->add();
 		$result = json_decode($json_result, true)['data'];
 		$this->assertEquals('web1', $result['loginname']);
@@ -493,7 +496,7 @@ class CustomersTest extends TestCase
 	public function testAdminCustomersAddLoginnameExists()
 	{
 		global $admin_userdata;
-		
+
 		$data = [
 			'new_loginname' => 'test1',
 			'email' => 'team@froxlor.org',
@@ -501,7 +504,7 @@ class CustomersTest extends TestCase
 			'name' => 'Testman2',
 			'customernumber' => 1339
 		];
-		
+
 		$this->expectExceptionMessage('Loginname test1 already exists');
 		Customers::getLocal($admin_userdata, $data)->add();
 	}
@@ -513,7 +516,7 @@ class CustomersTest extends TestCase
 	public function testAdminCustomersAddLoginnameInvalid()
 	{
 		global $admin_userdata;
-		
+
 		$data = [
 			'new_loginname' => 'user-',
 			'email' => 'team@froxlor.org',
@@ -521,7 +524,7 @@ class CustomersTest extends TestCase
 			'name' => 'Testman2',
 			'customernumber' => 1339
 		];
-		
+
 		$this->expectExceptionMessage('Loginname "user-" contains illegal characters.');
 		Customers::getLocal($admin_userdata, $data)->add();
 	}
@@ -533,7 +536,7 @@ class CustomersTest extends TestCase
 	public function testAdminCustomersAddLoginnameInvalid2()
 	{
 		global $admin_userdata;
-		
+
 		$data = [
 			'new_loginname' => 'useruseruseruseruseruserX',
 			'email' => 'team@froxlor.org',
@@ -541,7 +544,7 @@ class CustomersTest extends TestCase
 			'name' => 'Testman2',
 			'customernumber' => 1339
 		];
-		
+
 		$this->expectExceptionMessage('Loginname contains too many characters. Only ' . (14 - strlen(Settings::Get('customer.mysqlprefix'))) . ' characters are allowed.');
 		Customers::getLocal($admin_userdata, $data)->add();
 	}

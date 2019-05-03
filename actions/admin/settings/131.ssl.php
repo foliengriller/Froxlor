@@ -13,7 +13,7 @@
  * @author     Florian Lippert <flo@syscp.org> (2003-2009)
  * @author     Froxlor team <team@froxlor.org> (2010-)
  * @license    GPLv2 http://files.froxlor.org/misc/COPYING.txt
- * @package    Settings
+ * @package    \Froxlor\Settings
  *
  */
 return array(
@@ -102,7 +102,7 @@ return array(
 					'string_type' => 'string',
 					'string_emptyallowed' => false,
 					'default' => 'shmcb:/var/run/apache2/ocsp-stapling.cache(131072)',
-					'visible' => Settings::Get('system.webserver') == "apache2" && Settings::Get('system.apache24') == 1,
+					'visible' => \Froxlor\Settings::Get('system.webserver') == "apache2" && \Froxlor\Settings::Get('system.apache24') == 1,
 					'save_method' => 'storeSettingField'
 				),
 				'system_leenabled' => array(
@@ -144,27 +144,9 @@ return array(
 					'default' => 'testing',
 					'option_mode' => 'one',
 					'option_options' => array(
-						'testing' => 'https://acme-staging' . (Settings::Get('system.leapiversion') == '2' ? '-v02' : '') . '.api.letsencrypt.org (Test)',
-						'production' => 'https://acme-v0' . Settings::Get('system.leapiversion') . '.api.letsencrypt.org (Live)'
+						'testing' => 'https://acme-staging' . (\Froxlor\Settings::Get('system.leapiversion') == '2' ? '-v02' : '') . '.api.letsencrypt.org (Test)',
+						'production' => 'https://acme-v0' . \Froxlor\Settings::Get('system.leapiversion') . '.api.letsencrypt.org (Live)'
 					),
-					'save_method' => 'storeSettingField'
-				),
-				'system_letsencryptcountrycode' => array(
-					'label' => $lng['serversettings']['letsencryptcountrycode'],
-					'settinggroup' => 'system',
-					'varname' => 'letsencryptcountrycode',
-					'type' => 'string',
-					'string_emptyallowed' => false,
-					'default' => 'DE',
-					'save_method' => 'storeSettingField'
-				),
-				'system_letsencryptstate' => array(
-					'label' => $lng['serversettings']['letsencryptstate'],
-					'settinggroup' => 'system',
-					'varname' => 'letsencryptstate',
-					'type' => 'string',
-					'string_emptyallowed' => false,
-					'default' => 'Hessen',
 					'save_method' => 'storeSettingField'
 				),
 				'system_letsencryptchallengepath' => array(
@@ -173,16 +155,36 @@ return array(
 					'varname' => 'letsencryptchallengepath',
 					'type' => 'string',
 					'string_emptyallowed' => false,
-					'default' => FROXLOR_INSTALL_DIR,
+					'default' => \Froxlor\Froxlor::getInstallDir(),
 					'save_method' => 'storeSettingField'
 				),
 				'system_letsencryptkeysize' => array(
 					'label' => $lng['serversettings']['letsencryptkeysize'],
 					'settinggroup' => 'system',
 					'varname' => 'letsencryptkeysize',
-					'type' => 'int',
-					'int_min' => 2048,
-					'default' => 4096,
+					'type' => 'option',
+					'default' => '2048',
+					'option_mode' => 'one',
+					'option_options' => array(
+						'2048' => '2048',
+						'3072' => '3072',
+						'4096' => '4096',
+						'8192' => '8192'
+					),
+					'save_method' => 'storeSettingField'
+				),
+				'system_leecc' => array(
+					'label' => $lng['serversettings']['letsencryptecc'],
+					'settinggroup' => 'system',
+					'varname' => 'leecc',
+					'type' => 'option',
+					'default' => '0',
+					'option_mode' => 'one',
+					'option_options' => array(
+						'0' => '-',
+						'256' => 'ec-256',
+						'384' => 'ec-384'
+					),
 					'save_method' => 'storeSettingField'
 				),
 				'system_letsencryptreuseold' => array(
@@ -190,7 +192,7 @@ return array(
 					'settinggroup' => 'system',
 					'varname' => 'letsencryptreuseold',
 					'type' => 'bool',
-					'default' => false,
+					'default' => true,
 					'save_method' => 'storeSettingField'
 				),
 				'system_disable_le_selfcheck' => array(
